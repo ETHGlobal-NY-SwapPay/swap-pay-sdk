@@ -12,6 +12,9 @@ export {useAssetData} from './hooks/useAssetData';
 // Services
 export {ChainlinkAssetService} from './services/ChainlinkAssetService';
 
+// Utilities
+export {PurchaseCalculator} from './utils/purchaseCalculator';
+
 // Wallet Adapters
 export {RainbowKitAdapter} from './adapters/RainbowKitAdapter';
 export {MetaMaskAdapter} from './adapters/MetaMaskAdapter';
@@ -26,5 +29,9 @@ export type {
     ProviderConfig,
     PriceService,
     BalanceService,
-    AssetDataService
+    AssetDataService,
+    PurchaseItem,
+    PurchasePayload,
+    FeeCalculation,
+    FeeConfig
 } from './types';

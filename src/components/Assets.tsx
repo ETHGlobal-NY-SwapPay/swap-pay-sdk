@@ -2,13 +2,15 @@ import React, {useState} from 'react';
 import type {
     AssetConfig,
     AssetDataService,
-    AllocationState
-} from '@/types';
+    AllocationState,
+    PurchasePayload,
+    FeeConfig
+} from '../types';
 import {usePrices} from '../hooks/prices';
 import {useBalances} from '../hooks/balances';
-import {calculateAllocation} from '../utils/calculations';
 import {formatCurrency, formatBalance, formatTokenBalance, formatPrice} from '../utils/formatters';
-import type {Wallet} from "@/types/wallet.ts";
+import {PurchaseCalculator} from '../utils/purchaseCalculator';
+import type {Wallet} from "../types/wallet";
 import {ChainlinkAssetService} from '../services/ChainlinkAssetService';
 import {SEPOLIA_ASSETS, SEPOLIA_CONFIG} from '../config';
 
@@ -19,7 +21,8 @@ export interface AssetsProps {
     targetAmount?: number;
     className?: string;
     onAllocationChange?: (state: AllocationState) => void;
-    onPurchase?: (allocation: AllocationState) => void;
+    onPurchase?: (payload: PurchasePayload) => void;
+    feeConfig?: FeeConfig;
 }
 
 const cardStyle: React.CSSProperties = {
@@ -46,6 +49,7 @@ export function Assets({
                                     targetAmount = 10000,
                                     onAllocationChange,
                                     onPurchase,
+                                    feeConfig,
                                 }: AssetsProps) {
 
     const TOTAL = targetAmount; // Use targetAmount as TOTAL
@@ -171,7 +175,19 @@ export function Assets({
                 totalAllocated: totalAllocated,
                 isComplete: isTargetReached
             };
-            onPurchase(state);
+
+            // Create enhanced purchase payload
+            const payload = PurchaseCalculator.createPurchasePayload(
+                state,
+                assets,
+                prices,
+                tokenLimits,
+                targetAmount,
+                wallet?.chainId ?? 0,
+                feeConfig
+            );
+
+            onPurchase(payload);
         }
     };
 
@@ -391,8 +407,8 @@ export function Assets({
 
                             {/* Slider - Flexible center column */}
                             <div style={{
-                                display: 'flex', 
-                                flexDirection: 'column', 
+                                display: 'flex',
+                                flexDirection: 'column',
                                 gap: '4px',
                                 justifyContent: 'center',
                                 alignItems: 'center',

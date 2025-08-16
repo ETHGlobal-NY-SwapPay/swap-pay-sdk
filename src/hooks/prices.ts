@@ -2,7 +2,7 @@ import {useState, useEffect, useCallback} from 'react';
 import type {
     TokenPrices,
     AssetDataService
-} from '@/types';
+} from '../types';
 
 export function usePrices(service: AssetDataService, interval = 5000) {
     const [prices, setPrices] = useState<TokenPrices | null>(null);
