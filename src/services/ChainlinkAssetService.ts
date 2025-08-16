@@ -1,52 +1,7 @@
 import type {TokenPrices, TokenBalances, ProviderConfig, AssetDataService} from '../types';
 import {createPublicClient, http, getContract, type Address} from 'viem';
 import {sepolia} from 'viem/chains';
-
-const DATA_FEEDS_ABI = [
-    {
-        inputs: [{internalType: "address", name: "_account", type: "address"}],
-        name: "getBalances",
-        outputs: [
-            {
-                components: [
-                    {internalType: "uint256", name: "eth", type: "uint256"},
-                    {internalType: "uint256", name: "wbtc", type: "uint256"},
-                    {internalType: "uint256", name: "dai", type: "uint256"},
-                    {internalType: "uint256", name: "usdc", type: "uint256"},
-                    {internalType: "uint256", name: "link", type: "uint256"},
-                    {internalType: "uint256", name: "wsteth", type: "uint256"},
-                ],
-                internalType: "struct DataFeeds.Balances",
-                name: "",
-                type: "tuple",
-            },
-        ],
-        stateMutability: "view",
-        type: "function",
-    },
-    {
-        inputs: [],
-        name: "getPrices",
-        outputs: [
-            {
-                components: [
-                    {internalType: "int256", name: "ethUsd", type: "int256"},
-                    {internalType: "int256", name: "wbtcUsd", type: "int256"},
-                    {internalType: "int256", name: "daiUsd", type: "int256"},
-                    {internalType: "int256", name: "usdcUsd", type: "int256"},
-                    {internalType: "int256", name: "linkUsd", type: "int256"},
-                    {internalType: "int256", name: "wstethUsd", type: "int256"},
-                ],
-                internalType: "struct DataFeeds.Prices",
-                name: "",
-                type: "tuple",
-            },
-        ],
-        stateMutability: "view",
-        type: "function",
-    },
-] as const;
-
+import {DataFeeds} from "../assets/contracts/DataFeeds.ts";
 
 export class ChainlinkAssetService implements AssetDataService {
     private publicClient;
@@ -62,7 +17,7 @@ export class ChainlinkAssetService implements AssetDataService {
         try {
             const contract = getContract({
                 address: this.config.contractAddress as Address,
-                abi: DATA_FEEDS_ABI,
+                abi: DataFeeds.abi,
                 client: {public: this.publicClient},
             });
 
@@ -86,7 +41,7 @@ export class ChainlinkAssetService implements AssetDataService {
         try {
             const contract = getContract({
                 address: this.config.contractAddress as Address,
-                abi: DATA_FEEDS_ABI,
+                abi: DataFeeds.abi,
                 client: {public: this.publicClient},
             });
 

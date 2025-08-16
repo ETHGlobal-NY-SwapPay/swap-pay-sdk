@@ -9,10 +9,12 @@ import {useBalances} from '../hooks/balances';
 import {calculateAllocation} from '../utils/calculations';
 import {formatCurrency, formatBalance, formatTokenBalance} from '../utils/formatters';
 import type {Wallet} from "@/types/wallet.ts";
+import {ChainlinkAssetService} from '../services/ChainlinkAssetService';
+import {SEPOLIA_ASSETS, SEPOLIA_CONFIG} from '../config';
 
 export interface AssetsProps {
-    service: AssetDataService;
-    assets: AssetConfig[];
+    service?: AssetDataService;
+    assets?: AssetConfig[];
     wallet?: Wallet;
     targetAmount?: number;
     className?: string;
@@ -38,13 +40,18 @@ const containerStyle: React.CSSProperties = {
 };
 
 export function Assets({
-                                    service,
-                                    assets,
+                                    service: providedService,
+                                    assets: providedAssets,
                                     wallet,
                                     targetAmount = 10000,
                                     onAllocationChange,
                                     onPurchase,
                                 }: AssetsProps) {
+    const service = React.useMemo(() =>
+        providedService || new ChainlinkAssetService(SEPOLIA_CONFIG),
+        [providedService]
+    );
+    const assets = providedAssets || SEPOLIA_ASSETS;
     const [allocations, setAllocations] = useState<number[]>(new Array(assets.length).fill(0));
 
     // Use separate hooks for prices and balances
