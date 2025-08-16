@@ -1,30 +1,31 @@
 import React, { useState } from 'react';
 import { SEPOLIA_ASSETS } from "@/config/assets.ts";
-import type { AllocationState} from "@/types";
+import type {
+    AssetDataService,
+    AllocationState
+} from "@/types";
+import { usePrices } from '../hooks/prices';
+import { useBalances } from '../hooks/balances';
+import { calculateAllocation } from '../utils/calculations';
+import { formatCurrency, formatBalance, formatTokenBalance } from '../utils/formatters';
 import type {Wallet} from "@/types/wallet.ts";
 
 interface AssetsProps {
+    service: AssetDataService;
     targetAmount: number;
     wallet?: Wallet;
+    onAllocationChange?: (state: AllocationState) => void;
     onPurchase?: (allocation: AllocationState) => void;
 }
-
-const mockBalances = {
-    weth: 0.5,
-    usdc: 2500,
-    wbtc: 0.02,
-    link: 150,
-    uni: 85
-};
 
 const cardStyle: React.CSSProperties = {
     background: 'white',
     border: '1px solid #e5e7eb',
     borderRadius: '8px',
     padding: '16px',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
     marginBottom: '12px',
-    fontFamily: 'system-ui, sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
 };
 
 const containerStyle: React.CSSProperties = {
@@ -34,11 +35,23 @@ const containerStyle: React.CSSProperties = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
 };
 
-const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
+const Assets = ({
+                    service,
+                    targetAmount = 1000,
+                    wallet,
+                    onAllocationChange,
+                    onPurchase
+                }: AssetsProps) => {
     const assets = SEPOLIA_ASSETS;
     const [allocations, setAllocations] = useState<number[]>(
         new Array(assets.length).fill(0)
     );
+
+    // Use separate hooks for prices and balances
+    const { prices, error: priceError } = usePrices(service, 5000);
+    const { balances, error: balanceError } = useBalances(service, wallet || { isConnected: false, address: '', chainId: 0 });
+
+    const error = priceError || balanceError;
 
     // Add custom CSS to hide default slider styling
     React.useEffect(() => {
@@ -66,10 +79,39 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
         };
     }, []);
 
+    // Calculate allocation limits and effective values
+    const calculationResult = React.useMemo(() => {
+        if (!prices) return null;
+
+        return calculateAllocation(allocations, assets, prices, balances, targetAmount);
+    }, [allocations, assets, prices, balances, targetAmount]);
+
+    const totalAllocated = calculationResult?.totalAllocated || 0;
+    const isComplete = calculationResult?.isComplete || false;
+    const effectiveValues = calculationResult?.effectiveValues || allocations;
+
+    // Check if target is reached (within $1 tolerance)
+    const isTargetReached = Math.abs(totalAllocated - targetAmount) <= 1;
+
     const handleSliderChange = (index: number, value: number) => {
+        // If target is reached and trying to increase allocation, prevent it
+        if (isTargetReached && value > allocations[index]) {
+            return; // Don't allow increasing allocation when target is reached
+        }
+
         const newAllocations = [...allocations];
         newAllocations[index] = value;
         setAllocations(newAllocations);
+
+        if (onAllocationChange && calculationResult) {
+            const state: AllocationState = {
+                sliderValues: newAllocations,
+                effectiveValues: calculationResult.effectiveValues,
+                totalAllocated: calculationResult.totalAllocated,
+                isComplete: calculationResult.isComplete
+            };
+            onAllocationChange(state);
+        }
     };
 
     const handleReset = () => {
@@ -77,21 +119,34 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
     };
 
     const handlePurchase = () => {
-        console.log('Purchase with allocations:', allocations);
+        if (onPurchase && isComplete && prices) {
+            const state: AllocationState = {
+                sliderValues: allocations,
+                effectiveValues: effectiveValues,
+                totalAllocated: totalAllocated,
+                isComplete: isComplete
+            };
+            onPurchase(state);
+        }
     };
 
-    const totalAllocated = allocations.reduce((sum, allocation) =>
-        sum + (allocation / 100) * targetAmount, 0
-    );
-
-    const isTargetReached = Math.abs(totalAllocated - targetAmount) <= 1;
-    const isSliderDisabled = false // !wallet?.isConnected;
+    if (error) {
+        return (
+            <div style={containerStyle}>
+                <div style={cardStyle}>
+                    <p>Error loading asset data: {error.message}</p>
+                    <button onClick={() => window.location.reload()}>Retry</button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={containerStyle}>
+            {/* Header */}
             <div style={{
                 ...cardStyle,
-                background: isTargetReached ? '#f0fdf4' : 'white',
+                background: isTargetReached ? '#f0fdf4' : 'white', // Light green background when target reached
                 border: isTargetReached ? '1px solid #22c55e' : '1px solid #e5e7eb'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -104,10 +159,7 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                         Portfolio Allocation {isTargetReached && '✓'}
                     </h1>
                     <span style={{ fontSize: '14px', color: '#6b7280' }}>
-                        {wallet?.isConnected ?
-                            `Connected: ${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` :
-                            'Connect wallet to see balances'
-                        }
+                        {isTargetReached ? 'Target Reached!' : `Adjust the sliders to reach ${formatCurrency(targetAmount)}`}
                     </span>
                 </div>
 
@@ -117,13 +169,13 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                         fontWeight: '700',
                         color: isTargetReached ? '#16a34a' : 'inherit'
                     }}>
-                        ${totalAllocated.toFixed(2)}
+                        {formatCurrency(totalAllocated)}
                         <span style={{
                             fontSize: '16px',
                             color: isTargetReached ? '#16a34a' : '#6b7280',
                             marginLeft: '8px'
                         }}>
-                            / ${targetAmount.toLocaleString()}
+                            / {formatCurrency(targetAmount)}
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -142,14 +194,14 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                         </button>
                         <button
                             onClick={handlePurchase}
-                            disabled={!isTargetReached}
+                            disabled={!isComplete}
                             style={{
                                 padding: '8px 16px',
                                 border: 'none',
                                 borderRadius: '6px',
-                                background: isTargetReached ? '#16a34a' : '#d1d5db',
-                                color: isTargetReached ? 'white' : '#6b7280',
-                                cursor: isTargetReached ? 'pointer' : 'not-allowed',
+                                background: isComplete ? (isTargetReached ? '#16a34a' : '#111827') : '#d1d5db',
+                                color: isComplete ? 'white' : '#6b7280',
+                                cursor: isComplete ? 'pointer' : 'not-allowed',
                                 fontSize: '14px'
                             }}
                         >
@@ -158,6 +210,7 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                     </div>
                 </div>
 
+                {/* Progress bar */}
                 <div style={{
                     width: '100%',
                     height: '8px',
@@ -183,25 +236,28 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                         fontSize: '14px',
                         color: '#16a34a'
                     }}>
-                        🎯 Target reached! Ready to purchase.
+                        🎯 Target reached! You can only decrease or modify existing allocations.
                     </div>
                 )}
             </div>
 
+            {/* Asset List */}
             <div style={cardStyle}>
                 {assets.map((asset, index) => {
-                    const allocationAmount = (allocations[index] / 100) * targetAmount;
+                    const priceKey = `${asset.symbol.toLowerCase()}Usd` as keyof typeof prices;
+                    const price = prices ? Number(prices[priceKey]) / Math.pow(10, asset.priceFeedDecimals) : 0;
 
-                    // Get available balance for this asset (mock prices for calculation)
-                    const mockPrice = asset.symbol === 'WETH' ? 3000 :
-                        asset.symbol === 'USDC' ? 1 :
-                            asset.symbol === 'WBTC' ? 45000 :
-                                asset.symbol === 'LINK' ? 15 :
-                                    asset.symbol === 'UNI' ? 8 : 1;
+                    // Get available balance for this asset
+                    const balanceKey = asset.symbol.toLowerCase() as keyof typeof balances;
+                    const availableBalance = balances && prices ?
+                        formatBalance(balances[balanceKey] ?? 0n, asset.tokenDecimals) : 0;
+                    const availableBalanceUsd = availableBalance * price;
 
-                    const balanceKey = asset.symbol.toLowerCase().replace('w', '') as keyof typeof mockBalances;
-                    const availableBalance = wallet?.isConnected ? mockBalances[balanceKey] || 0 : 0;
-                    const availableBalanceUsd = availableBalance * mockPrice;
+                    const allocationAmount = (effectiveValues[index] / 100) * targetAmount;
+                    const isSliderDisabled = false; // !wallet?.isConnected;
+
+                    // Check if this asset contributes to reaching the target
+                    const contributesToTarget = allocations[index] > 0 && isTargetReached;
 
                     // Check if asset has zero available balance
                     const hasZeroBalance = availableBalance === 0;
@@ -212,13 +268,22 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                             alignItems: 'center',
                             gap: '16px',
                             padding: '16px 0',
-                            borderBottom: index < assets.length - 1 ? '1px solid #f3f4f6' : 'none'
+                            borderBottom: index < assets.length - 1 ? '1px solid #f3f4f6' : 'none',
+                            background: contributesToTarget ? '#f0fdf4' : 'transparent',
+                            borderRadius: contributesToTarget ? '6px' : '0',
+                            paddingLeft: contributesToTarget ? '12px' : '0',
+                            paddingRight: contributesToTarget ? '12px' : '0'
                         }}>
+                            {/* Asset Info */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '200px' }}>
                                 <img
                                     src={asset.logo}
                                     alt={asset.name}
-                                    style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+                                    style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        borderRadius: '50%'
+                                    }}
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).src = `https://via.placeholder.com/40x40?text=${asset.symbol}`;
                                     }}
@@ -232,33 +297,35 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                                     }}>
                                         <span style={{
                                             fontWeight: '600',
-                                            fontSize: '14px'
+                                            fontSize: '14px',
+                                            color: contributesToTarget ? '#16a34a' : 'inherit'
                                         }}>
-                                            {asset.name}
+                                            {asset.name} {contributesToTarget && '✓'}
                                         </span>
                                         <span style={{
                                             fontSize: '12px',
                                             color: '#6b7280',
                                             fontWeight: '500'
                                         }}>
-                                            ${mockPrice.toLocaleString()}
+                                            ${price.toFixed(2)}
                                         </span>
                                     </div>
-                                    {wallet?.isConnected ? (
+                                    {wallet?.isConnected && balances && (
                                         <div>
                                             <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                                                Available: {availableBalance} {asset.symbol}
+                                                Available: {formatTokenBalance(availableBalance, asset.symbol)}
                                                 {availableBalanceUsd > 0 && (
-                                                    <span style={{ color: '#6b7280' }}> (${availableBalanceUsd.toLocaleString()})</span>
+                                                    <span style={{ color: '#6b7280' }}> ({formatCurrency(availableBalanceUsd)})</span>
                                                 )}
                                             </div>
                                             {allocations[index] > 0 && (
                                                 <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '1px' }}>
-                                                    Spending: {(allocationAmount / mockPrice).toFixed(4)} {asset.symbol} (${allocationAmount.toFixed(2)})
+                                                    Spent: {formatTokenBalance(allocationAmount / price, asset.symbol)} ({formatCurrency(allocationAmount)})
                                                 </div>
                                             )}
                                         </div>
-                                    ) : (
+                                    )}
+                                    {!wallet?.isConnected && (
                                         <div style={{ fontSize: '11px', color: '#9ca3af' }}>
                                             Connect wallet to see balance
                                         </div>
@@ -266,10 +333,11 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                                 </div>
                             </div>
 
-                            {/* Custom Slider */}
+                            {/* Slider */}
                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '16px' }}>
                                 <span style={{ fontSize: '12px', color: '#6b7280', minWidth: '30px' }}>0%</span>
 
+                                {/* Custom Slider Container */}
                                 <div style={{
                                     position: 'relative',
                                     flex: 1,
@@ -279,14 +347,20 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                                     margin: '0 16px',
                                     opacity: isSliderDisabled ? 0.5 : 1
                                 }}>
+                                    {/* Progress Fill */}
                                     <div style={{
-                                        width: `${allocations[index]}%`,
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
                                         height: '100%',
-                                        background: hasZeroBalance ? '#d1d5db' : '#111827',
+                                        width: `${allocations[index]}%`,
+                                        background: hasZeroBalance ? '#d1d5db' :
+                                            contributesToTarget ? '#22c55e' : '#111827',
                                         borderRadius: '3px',
                                         transition: 'width 0.2s ease'
                                     }} />
 
+                                    {/* Actual Slider Input */}
                                     <input
                                         type="range"
                                         min="0"
@@ -303,18 +377,23 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                                             height: '18px',
                                             background: 'transparent',
                                             outline: 'none',
+                                            WebkitAppearance: 'none',
+                                            appearance: 'none',
                                             cursor: isSliderDisabled ? 'not-allowed' : 'pointer'
                                         }}
-                                        title={isSliderDisabled ? 'Connect wallet to edit' : ''}
+                                        title={isSliderDisabled ? 'Connect wallet to edit' :
+                                            (isTargetReached && allocations[index] === 0) ? 'Cannot add more resources - target reached' : ''}
                                     />
 
+                                    {/* Custom Slider Thumb */}
                                     <div style={{
                                         position: 'absolute',
                                         top: '-6px',
                                         left: `calc(${allocations[index]}% - 9px)`,
                                         width: '18px',
                                         height: '18px',
-                                        background: hasZeroBalance ? '#9ca3af' : '#111827',
+                                        background: hasZeroBalance ? '#9ca3af' :
+                                            contributesToTarget ? '#22c55e' : '#111827',
                                         borderRadius: '50%',
                                         border: '2px solid white',
                                         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
@@ -326,12 +405,17 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                                 <span style={{ fontSize: '12px', color: '#6b7280', minWidth: '40px' }}>100%</span>
                             </div>
 
+                            {/* Allocation Display */}
                             <div style={{ textAlign: 'right', minWidth: '120px' }}>
-                                <div style={{ fontWeight: '600', fontSize: '16px' }}>
-                                    ${allocationAmount.toFixed(2)}
+                                <div style={{
+                                    fontWeight: '600',
+                                    fontSize: '16px',
+                                    color: contributesToTarget ? '#16a34a' : 'inherit'
+                                }}>
+                                    {formatCurrency(allocationAmount)}
                                 </div>
-                                <div style={{ fontSize: '12px', color: '#666' }}>
-                                    {allocations[index].toFixed(1)}%
+                                <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    Slider: {allocations[index].toFixed(1)}% • Effective: {effectiveValues[index].toFixed(1)}%
                                 </div>
                             </div>
                         </div>
@@ -344,7 +428,7 @@ const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
                     fontSize: '12px',
                     color: '#6b7280'
                 }}>
-                    Based on live market data
+                    Based on Chainlink Data Feeds
                 </div>
             </div>
         </div>

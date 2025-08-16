@@ -16,3 +16,42 @@ export interface AllocationState {
     totalAllocated: number;      // Total USD allocated
     isComplete: boolean;         // Whether allocation reaches target
 }
+
+
+// Provider Configuration
+export interface ProviderConfig {
+    chainId: number;
+    rpcUrl?: string;
+    contractAddress: string;
+    supportedAssets: AssetConfig[];
+}
+
+export interface TokenPrices {
+    ethUsd: bigint;
+    wbtcUsd: bigint;
+    daiUsd: bigint;
+    usdcUsd: bigint;
+    linkUsd: bigint;
+    wstethUsd: bigint;
+}
+
+
+// Service Interfaces
+export interface PriceService {
+    getPrices(): Promise<TokenPrices>;
+}
+
+export interface TokenBalances {
+    eth: bigint;
+    wbtc: bigint;
+    dai: bigint;
+    usdc: bigint;
+    link: bigint;
+    wsteth: bigint;
+}
+
+export interface BalanceService {
+    getBalances(address: string): Promise<TokenBalances>;
+}
+
+export interface AssetDataService extends PriceService, BalanceService {}
