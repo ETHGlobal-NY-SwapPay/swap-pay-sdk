@@ -1,11 +1,21 @@
-import React, { useState} from 'react';
-import {SEPOLIA_ASSETS} from "@/config/assets.ts";
-import type {AllocationState} from "@/types";
+import React, { useState } from 'react';
+import { SEPOLIA_ASSETS } from "@/config/assets.ts";
+import type { AllocationState} from "@/types";
+import type {Wallet} from "@/types/wallet.ts";
 
 interface AssetsProps {
     targetAmount: number;
+    wallet?: Wallet;
     onPurchase?: (allocation: AllocationState) => void;
 }
+
+const mockBalances = {
+    weth: 0.5,
+    usdc: 2500,
+    wbtc: 0.02,
+    link: 150,
+    uni: 85
+};
 
 const cardStyle: React.CSSProperties = {
     background: 'white',
@@ -24,7 +34,7 @@ const containerStyle: React.CSSProperties = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
 };
 
-const Assets = ({targetAmount = 1000}:AssetsProps) => {
+const Assets = ({ targetAmount = 1000, wallet }: AssetsProps) => {
     const assets = SEPOLIA_ASSETS;
     const [allocations, setAllocations] = useState<number[]>(
         new Array(assets.length).fill(0)
@@ -67,7 +77,7 @@ const Assets = ({targetAmount = 1000}:AssetsProps) => {
     };
 
     const handlePurchase = () => {
-
+        console.log('Purchase with allocations:', allocations);
     };
 
     const totalAllocated = allocations.reduce((sum, allocation) =>
@@ -75,7 +85,7 @@ const Assets = ({targetAmount = 1000}:AssetsProps) => {
     );
 
     const isTargetReached = Math.abs(totalAllocated - targetAmount) <= 1;
-    const isSliderDisabled = false;
+    const isSliderDisabled = false // !wallet?.isConnected;
 
     return (
         <div style={containerStyle}>
@@ -88,20 +98,33 @@ const Assets = ({targetAmount = 1000}:AssetsProps) => {
                     <h1 style={{
                         margin: 0,
                         fontSize: '18px',
+                        fontWeight: '600',
                         color: isTargetReached ? '#16a34a' : 'inherit'
                     }}>
                         Portfolio Allocation {isTargetReached && '✓'}
                     </h1>
-
+                    <span style={{ fontSize: '14px', color: '#6b7280' }}>
+                        {wallet?.isConnected ?
+                            `Connected: ${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` :
+                            'Connect wallet to see balances'
+                        }
+                    </span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{
                         fontSize: '24px',
-                        fontWeight: 'bold',
+                        fontWeight: '700',
                         color: isTargetReached ? '#16a34a' : 'inherit'
                     }}>
-                        ${totalAllocated.toFixed(2)} / ${targetAmount.toLocaleString()}
+                        ${totalAllocated.toFixed(2)}
+                        <span style={{
+                            fontSize: '16px',
+                            color: isTargetReached ? '#16a34a' : '#6b7280',
+                            marginLeft: '8px'
+                        }}>
+                            / ${targetAmount.toLocaleString()}
+                        </span>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button
@@ -149,11 +172,39 @@ const Assets = ({targetAmount = 1000}:AssetsProps) => {
                         transition: 'width 0.3s ease'
                     }} />
                 </div>
+
+                {isTargetReached && (
+                    <div style={{
+                        marginTop: '12px',
+                        padding: '8px 12px',
+                        background: '#dcfce7',
+                        border: '1px solid #22c55e',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        color: '#16a34a'
+                    }}>
+                        🎯 Target reached! Ready to purchase.
+                    </div>
+                )}
             </div>
 
             <div style={cardStyle}>
                 {assets.map((asset, index) => {
                     const allocationAmount = (allocations[index] / 100) * targetAmount;
+
+                    // Get available balance for this asset (mock prices for calculation)
+                    const mockPrice = asset.symbol === 'WETH' ? 3000 :
+                        asset.symbol === 'USDC' ? 1 :
+                            asset.symbol === 'WBTC' ? 45000 :
+                                asset.symbol === 'LINK' ? 15 :
+                                    asset.symbol === 'UNI' ? 8 : 1;
+
+                    const balanceKey = asset.symbol.toLowerCase().replace('w', '') as keyof typeof mockBalances;
+                    const availableBalance = wallet?.isConnected ? mockBalances[balanceKey] || 0 : 0;
+                    const availableBalanceUsd = availableBalance * mockPrice;
+
+                    // Check if asset has zero available balance
+                    const hasZeroBalance = availableBalance === 0;
 
                     return (
                         <div key={asset.symbol} style={{
@@ -168,11 +219,50 @@ const Assets = ({targetAmount = 1000}:AssetsProps) => {
                                     src={asset.logo}
                                     alt={asset.name}
                                     style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = `https://via.placeholder.com/40x40?text=${asset.symbol}`;
+                                    }}
                                 />
                                 <div>
-                                    <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '2px' }}>
-                                        {asset.name}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        marginBottom: '2px'
+                                    }}>
+                                        <span style={{
+                                            fontWeight: '600',
+                                            fontSize: '14px'
+                                        }}>
+                                            {asset.name}
+                                        </span>
+                                        <span style={{
+                                            fontSize: '12px',
+                                            color: '#6b7280',
+                                            fontWeight: '500'
+                                        }}>
+                                            ${mockPrice.toLocaleString()}
+                                        </span>
                                     </div>
+                                    {wallet?.isConnected ? (
+                                        <div>
+                                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                                                Available: {availableBalance} {asset.symbol}
+                                                {availableBalanceUsd > 0 && (
+                                                    <span style={{ color: '#6b7280' }}> (${availableBalanceUsd.toLocaleString()})</span>
+                                                )}
+                                            </div>
+                                            {allocations[index] > 0 && (
+                                                <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '1px' }}>
+                                                    Spending: {(allocationAmount / mockPrice).toFixed(4)} {asset.symbol} (${allocationAmount.toFixed(2)})
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                                            Connect wallet to see balance
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -186,12 +276,13 @@ const Assets = ({targetAmount = 1000}:AssetsProps) => {
                                     height: '6px',
                                     background: '#e5e7eb',
                                     borderRadius: '3px',
+                                    margin: '0 16px',
                                     opacity: isSliderDisabled ? 0.5 : 1
                                 }}>
                                     <div style={{
                                         width: `${allocations[index]}%`,
                                         height: '100%',
-                                        background: '#111827',
+                                        background: hasZeroBalance ? '#d1d5db' : '#111827',
                                         borderRadius: '3px',
                                         transition: 'width 0.2s ease'
                                     }} />
@@ -223,7 +314,7 @@ const Assets = ({targetAmount = 1000}:AssetsProps) => {
                                         left: `calc(${allocations[index]}% - 9px)`,
                                         width: '18px',
                                         height: '18px',
-                                        background: '#111827',
+                                        background: hasZeroBalance ? '#9ca3af' : '#111827',
                                         borderRadius: '50%',
                                         border: '2px solid white',
                                         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
@@ -240,12 +331,21 @@ const Assets = ({targetAmount = 1000}:AssetsProps) => {
                                     ${allocationAmount.toFixed(2)}
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#666' }}>
-                                    {allocations[index]}%
+                                    {allocations[index].toFixed(1)}%
                                 </div>
                             </div>
                         </div>
                     );
                 })}
+
+                <div style={{
+                    textAlign: 'right',
+                    marginTop: '16px',
+                    fontSize: '12px',
+                    color: '#6b7280'
+                }}>
+                    Based on live market data
+                </div>
             </div>
         </div>
     );
