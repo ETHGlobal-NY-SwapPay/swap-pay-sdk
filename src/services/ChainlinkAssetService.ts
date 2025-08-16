@@ -58,12 +58,11 @@ const DATA_FEEDS_ABI = [
 
 export class ChainlinkAssetService implements AssetDataService {
     private publicClient;
-    private config = SEPOLIA_CONFIG;
 
-    constructor() {
+    constructor(private config: ProviderConfig) {
         this.publicClient = createPublicClient({
-            chain: sepolia,
-            transport: http(this.config.rpcUrl),
+            chain: sepolia, // TODO: Make this configurable
+            transport: config.rpcUrl ? http(config.rpcUrl) : http(),
         });
     }
 
