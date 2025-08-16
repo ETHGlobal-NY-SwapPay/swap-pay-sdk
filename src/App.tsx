@@ -1,9 +1,10 @@
 import './App.css'
-import Assets from "./components/Assets.tsx";
 import {ChainlinkAssetService} from "@/services/ChainlinkAssetService.ts";
+import {SEPOLIA_CONFIG} from "@/config";
+import {Assets} from "@/components/Assets.tsx";
 
 function App() {
-    const service = new ChainlinkAssetService();
+    const service = new ChainlinkAssetService(SEPOLIA_CONFIG);
     return (
         <>
         <Assets
