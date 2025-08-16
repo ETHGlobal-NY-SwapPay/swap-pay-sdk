@@ -1,4 +1,5 @@
 import {SEPOLIA_ASSETS} from "@/config/assets.ts";
+import {useState} from "react";
 
 function formatCurrency(amount: number, currency = 'USD'): string {
     return new Intl.NumberFormat('en-US', {
@@ -7,11 +8,28 @@ function formatCurrency(amount: number, currency = 'USD'): string {
     }).format(amount);
 }
 
-const Assets = () => {
-    const totalAllocated = 0;
-    const targetAmount = 0;
-    const isTargetReached = true;
+export interface AssetsProps {
+    targetAmount: number;
+}
+
+const Assets = ({targetAmount}:AssetsProps) => {
     const assets = SEPOLIA_ASSETS;
+    const [allocations, setAllocations] = useState<number[]>(
+        new Array(assets.length).fill(0)
+    );
+
+    const isTargetReached = true;
+
+
+    const handleSliderChange = (index: number, value: number) => {
+        const newAllocations = [...allocations];
+        newAllocations[index] = value;
+        setAllocations(newAllocations);
+    };
+
+    const totalAllocated = allocations.reduce((sum, allocation) =>
+        sum + (allocation / 100) * targetAmount, 0
+    );
 
     return (
         <div>
@@ -52,14 +70,22 @@ const Assets = () => {
 
             {/* Asset List */}
             <div>
-                {assets.map(asset => (
+                {assets.map((asset, index) => (
                     <div key={asset.symbol} style={{
                         padding: '10px',
                         border: '1px solid #ccc',
                         marginBottom: '10px'
                     }}>
-                        <div>{asset.name} ({asset.symbol})</div>
-                        <div>Price: 10</div>
+                        <div>{asset.name} ({asset.symbol}) - 10</div>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={allocations[index]}
+                            onChange={(e) => handleSliderChange(index, Number(e.target.value))}
+                        />
+                        <span>{allocations[index]}%</span>
+                        <div>Amount: ${((allocations[index] / 100) * targetAmount).toFixed(2)}</div>
                     </div>
                 ))}
             </div>
