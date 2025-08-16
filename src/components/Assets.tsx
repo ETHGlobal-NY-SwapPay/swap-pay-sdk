@@ -47,7 +47,7 @@ export function Assets({
                                     onAllocationChange,
                                     onPurchase,
                                 }: AssetsProps) {
-    // ===== Configuration Constants (matching original) =====
+
     const TOTAL = targetAmount; // Use targetAmount as TOTAL
     const TOL = 0.01; // 0.01 tolerance like original
     const EPS = 1e-6; // Small epsilon for floating point comparisons
@@ -57,8 +57,7 @@ export function Assets({
         [providedService]
     );
     const assets = providedAssets || SEPOLIA_ASSETS;
-    
-    // Use two separate arrays like the original: values (slider) and effective (actual allocation)
+
     const [values, setValues] = useState<number[]>(new Array(assets.length).fill(0)); // slider values
     const [effective, setEffective] = useState<number[]>(new Array(assets.length).fill(0)); // effective percentages
     const [activeSliderIndex, setActiveSliderIndex] = useState<number | null>(null);
@@ -69,25 +68,25 @@ export function Assets({
 
     const error = priceError || balanceError;
 
-    // Calculate token limits in USD (matching original logic)
+    // Calculate token limits in USD
     const tokenLimits = React.useMemo(() => {
         if (!balances || !prices) return assets.map(() => 0);
-        
+
         return assets.map((asset) => {
             const balanceKey = asset.symbol.toLowerCase() as keyof typeof balances;
             const priceKey = `${asset.symbol.toLowerCase()}Usd` as keyof typeof prices;
-            
+
             const balanceRaw = balances[balanceKey] ?? 0n;
             const priceRaw = prices[priceKey] ?? 0n;
-            
+
             const balanceToken = formatBalance(balanceRaw, asset.tokenDecimals);
             const priceUsd = formatPrice(priceRaw, asset.priceFeedDecimals);
-            
+
             return balanceToken * priceUsd;
         });
     }, [balances, prices, assets]);
 
-    // Total allocated USD (matching original)
+    // Total allocated USD
     const totalAllocated = React.useMemo(() => {
         const total = effective.reduce((acc, pct, i) => acc + (pct / 100) * tokenLimits[i], 0);
         console.log('Total calculation:', {
@@ -104,10 +103,10 @@ export function Assets({
         return total;
     }, [effective, tokenLimits, assets]);
 
-    // Global lock check (matching original)
+    // Global lock check
     const globallyLocked = !wallet?.isConnected;
 
-    // Slider disabled logic (exactly from original)
+    // Slider disabled logic
     const isSliderDisabled = (index: number) => {
         if (globallyLocked) return true;
         const reached = totalAllocated >= TOTAL - 0.01;
@@ -117,15 +116,15 @@ export function Assets({
     // Check if target is reached
     const isTargetReached = Math.abs(totalAllocated - TOTAL) <= 0.01;
 
-    // Handle slider change (exactly from original)
+    // Handle slider change
     const handleSliderChange = (index: number, newValue: number) => {
         if (globallyLocked) return;
         if (totalAllocated >= TOTAL - TOL && newValue > values[index]) return;
-        
+
         const sliders = [...values];
         sliders[index] = Math.max(0, Math.min(100, Math.round(newValue)));
         setValues(sliders);
-        
+
         const othersUSD = effective.reduce(
             (acc, pct, i) => (i === index ? acc : acc + (pct / 100) * tokenLimits[i]),
             0
@@ -137,11 +136,11 @@ export function Assets({
         let thisEffPct = Math.min(pctNeededExact, pctMaxBySlider, 100);
         if (missing <= EPS) thisEffPct = Math.min(effective[index], pctMaxBySlider);
         thisEffPct = Math.max(0, thisEffPct);
-        
+
         const nextEff = [...effective];
         nextEff[index] = thisEffPct;
         setEffective(nextEff);
-        
+
         const newTotal = othersUSD + (thisEffPct / 100) * denom;
         if (Math.abs(newTotal - TOTAL) <= 0.01) setActiveSliderIndex(index);
         else setActiveSliderIndex(null);
@@ -300,7 +299,7 @@ export function Assets({
                     const availableBalanceUsd = availableBalance * price;
 
                     const allocationAmount = (effective[index] / 100) * tokenLimits[index];
-                    
+
                     // Debug logging for this asset
                     if (effective[index] > 0) {
                         console.log(`Asset ${asset.symbol}:`, {
@@ -408,7 +407,7 @@ export function Assets({
                                     title={
                                         !wallet?.isConnected ? 'Connect wallet to edit' :
                                         hasZeroBalance ? 'No balance available for this asset' :
-                                        (isTargetReached && values[index] === 0) ? 
+                                        (isTargetReached && values[index] === 0) ?
                                         'Cannot add more assets - target reached exactly' : ''
                                     }
                                 />
