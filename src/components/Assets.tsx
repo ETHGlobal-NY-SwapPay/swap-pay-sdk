@@ -7,7 +7,7 @@ import type {
 import {usePrices} from '../hooks/prices';
 import {useBalances} from '../hooks/balances';
 import {calculateAllocation} from '../utils/calculations';
-import {formatCurrency, formatBalance, formatTokenBalance} from '../utils/formatters';
+import {formatCurrency, formatBalance, formatTokenBalance, formatPrice} from '../utils/formatters';
 import type {Wallet} from "@/types/wallet.ts";
 import {ChainlinkAssetService} from '../services/ChainlinkAssetService';
 import {SEPOLIA_ASSETS, SEPOLIA_CONFIG} from '../config';
@@ -47,12 +47,21 @@ export function Assets({
                                     onAllocationChange,
                                     onPurchase,
                                 }: AssetsProps) {
+    // ===== Configuration Constants (matching original) =====
+    const TOTAL = targetAmount; // Use targetAmount as TOTAL
+    const TOL = 0.01; // 0.01 tolerance like original
+    const EPS = 1e-6; // Small epsilon for floating point comparisons
+
     const service = React.useMemo(() =>
         providedService || new ChainlinkAssetService(SEPOLIA_CONFIG),
         [providedService]
     );
     const assets = providedAssets || SEPOLIA_ASSETS;
-    const [allocations, setAllocations] = useState<number[]>(new Array(assets.length).fill(0));
+    
+    // Use two separate arrays like the original: values (slider) and effective (actual allocation)
+    const [values, setValues] = useState<number[]>(new Array(assets.length).fill(0)); // slider values
+    const [effective, setEffective] = useState<number[]>(new Array(assets.length).fill(0)); // effective percentages
+    const [activeSliderIndex, setActiveSliderIndex] = useState<number | null>(null);
 
     // Use separate hooks for prices and balances
     const {prices, error: priceError} = usePrices(service, 5000);
@@ -60,78 +69,108 @@ export function Assets({
 
     const error = priceError || balanceError;
 
-    // Add custom CSS to hide default slider thumbs
-    React.useEffect(() => {
-        const style = document.createElement('style');
-        style.textContent = `
-            .custom-slider::-webkit-slider-thumb {
-                -webkit-appearance: none !important;
-                appearance: none !important;
-                width: 0 !important;
-                height: 0 !important;
-                background: transparent !important;
-            }
-            .custom-slider::-moz-range-thumb {
-                border: none !important;
-                width: 0 !important;
-                height: 0 !important;
-                background: transparent !important;
-                cursor: pointer;
-            }
-        `;
-        document.head.appendChild(style);
+    // Calculate token limits in USD (matching original logic)
+    const tokenLimits = React.useMemo(() => {
+        if (!balances || !prices) return assets.map(() => 0);
+        
+        return assets.map((asset) => {
+            const balanceKey = asset.symbol.toLowerCase() as keyof typeof balances;
+            const priceKey = `${asset.symbol.toLowerCase()}Usd` as keyof typeof prices;
+            
+            const balanceRaw = balances[balanceKey] ?? 0n;
+            const priceRaw = prices[priceKey] ?? 0n;
+            
+            const balanceToken = formatBalance(balanceRaw, asset.tokenDecimals);
+            const priceUsd = formatPrice(priceRaw, asset.priceFeedDecimals);
+            
+            return balanceToken * priceUsd;
+        });
+    }, [balances, prices, assets]);
 
-        return () => {
-            document.head.removeChild(style);
-        };
-    }, []);
+    // Total allocated USD (matching original)
+    const totalAllocated = React.useMemo(() => {
+        const total = effective.reduce((acc, pct, i) => acc + (pct / 100) * tokenLimits[i], 0);
+        console.log('Total calculation:', {
+            effective,
+            tokenLimits,
+            breakdown: effective.map((pct, i) => ({
+                asset: assets[i].symbol,
+                effective: pct,
+                tokenLimit: tokenLimits[i],
+                contribution: (pct / 100) * tokenLimits[i]
+            })),
+            total
+        });
+        return total;
+    }, [effective, tokenLimits, assets]);
 
-    // Calculate allocation limits and effective values
-    const calculationResult = React.useMemo(() => {
-        if (!prices) return null;
+    // Global lock check (matching original)
+    const globallyLocked = !wallet?.isConnected;
 
-        return calculateAllocation(allocations, assets, prices, balances, targetAmount);
-    }, [allocations, assets, prices, balances, targetAmount]);
+    // Slider disabled logic (exactly from original)
+    const isSliderDisabled = (index: number) => {
+        if (globallyLocked) return true;
+        const reached = totalAllocated >= TOTAL - 0.01;
+        return reached ? activeSliderIndex !== index : false;
+    };
 
-    const totalAllocated = calculationResult?.totalAllocated || 0;
-    const isComplete = calculationResult?.isComplete || false;
-    const effectiveValues = calculationResult?.effectiveValues || allocations;
+    // Check if target is reached
+    const isTargetReached = Math.abs(totalAllocated - TOTAL) <= 0.01;
 
-    // Check if target is reached (within $1 tolerance)
-    const isTargetReached = Math.abs(totalAllocated - targetAmount) <= 1;
+    // Handle slider change (exactly from original)
+    const handleSliderChange = (index: number, newValue: number) => {
+        if (globallyLocked) return;
+        if (totalAllocated >= TOTAL - TOL && newValue > values[index]) return;
+        
+        const sliders = [...values];
+        sliders[index] = Math.max(0, Math.min(100, Math.round(newValue)));
+        setValues(sliders);
+        
+        const othersUSD = effective.reduce(
+            (acc, pct, i) => (i === index ? acc : acc + (pct / 100) * tokenLimits[i]),
+            0
+        );
+        const missing = TOTAL - othersUSD;
+        const denom = Math.max(1e-9, tokenLimits[index]);
+        const pctMaxBySlider = sliders[index];
+        const pctNeededExact = (missing / denom) * 100;
+        let thisEffPct = Math.min(pctNeededExact, pctMaxBySlider, 100);
+        if (missing <= EPS) thisEffPct = Math.min(effective[index], pctMaxBySlider);
+        thisEffPct = Math.max(0, thisEffPct);
+        
+        const nextEff = [...effective];
+        nextEff[index] = thisEffPct;
+        setEffective(nextEff);
+        
+        const newTotal = othersUSD + (thisEffPct / 100) * denom;
+        if (Math.abs(newTotal - TOTAL) <= 0.01) setActiveSliderIndex(index);
+        else setActiveSliderIndex(null);
 
-    const handleSliderChange = (index: number, value: number) => {
-        // If target is reached and trying to increase allocation, prevent it
-        if (isTargetReached && value > allocations[index]) {
-            return; // Don't allow increasing allocation when target is reached
-        }
-
-        const newAllocations = [...allocations];
-        newAllocations[index] = value;
-        setAllocations(newAllocations);
-
-        if (onAllocationChange && calculationResult) {
+        // Call the callback with the updated state
+        if (onAllocationChange) {
             const state: AllocationState = {
-                sliderValues: newAllocations,
-                effectiveValues: calculationResult.effectiveValues,
-                totalAllocated: calculationResult.totalAllocated,
-                isComplete: calculationResult.isComplete
+                sliderValues: sliders,
+                effectiveValues: nextEff,
+                totalAllocated: newTotal,
+                isComplete: Math.abs(newTotal - TOTAL) <= 0.01
             };
             onAllocationChange(state);
         }
     };
 
     const handleReset = () => {
-        setAllocations(new Array(assets.length).fill(0));
+        setValues(new Array(assets.length).fill(0));
+        setEffective(new Array(assets.length).fill(0));
+        setActiveSliderIndex(null);
     };
 
     const handlePurchase = () => {
-        if (onPurchase && isComplete && prices) {
+        if (onPurchase && isTargetReached && prices) {
             const state: AllocationState = {
-                sliderValues: allocations,
-                effectiveValues: effectiveValues,
+                sliderValues: values,
+                effectiveValues: effective,
                 totalAllocated: totalAllocated,
-                isComplete: isComplete
+                isComplete: isTargetReached
             };
             onPurchase(state);
         }
@@ -201,14 +240,14 @@ export function Assets({
                         </button>
                         <button
                             onClick={handlePurchase}
-                            disabled={!isComplete}
+                            disabled={!isTargetReached}
                             style={{
                                 padding: '8px 16px',
                                 border: 'none',
                                 borderRadius: '6px',
-                                background: isComplete ? (isTargetReached ? '#16a34a' : '#111827') : '#d1d5db',
-                                color: isComplete ? 'white' : '#6b7280',
-                                cursor: isComplete ? 'pointer' : 'not-allowed',
+                                background: isTargetReached ? '#16a34a' : '#d1d5db',
+                                color: isTargetReached ? 'white' : '#6b7280',
+                                cursor: isTargetReached ? 'pointer' : 'not-allowed',
                                 fontSize: '14px'
                             }}
                         >
@@ -243,7 +282,7 @@ export function Assets({
                         fontSize: '14px',
                         color: '#16a34a'
                     }}>
-                        🎯 Target reached! You can only decrease or modify existing allocations.
+                        🎯 Target reached exactly! You can only decrease or modify existing allocations.
                     </div>
                 )}
             </div>
@@ -260,14 +299,24 @@ export function Assets({
                         formatBalance(balances[balanceKey] ?? 0n, asset.tokenDecimals) : 0;
                     const availableBalanceUsd = availableBalance * price;
 
-                    const allocationAmount = (effectiveValues[index] / 100) * targetAmount;
-                    const isSliderDisabled = !wallet?.isConnected;
-
-                    // Check if this asset contributes to reaching the target
-                    const contributesToTarget = allocations[index] > 0 && isTargetReached;
-
+                    const allocationAmount = (effective[index] / 100) * tokenLimits[index];
+                    
+                    // Debug logging for this asset
+                    if (effective[index] > 0) {
+                        console.log(`Asset ${asset.symbol}:`, {
+                            sliderValue: values[index],
+                            effectivePercent: effective[index],
+                            tokenLimit: tokenLimits[index],
+                            calculatedAmount: allocationAmount,
+                            price: price
+                        });
+                    }
                     // Check if asset has zero available balance
                     const hasZeroBalance = availableBalance === 0;
+
+                    // Check if this asset contributes to reaching the target
+                    const contributesToTarget = values[index] > 0 && isTargetReached;
+                    const sliderDisabled = isSliderDisabled(index);
 
                     return (
                         <div key={asset.symbol} style={{
@@ -325,7 +374,7 @@ export function Assets({
                                                     <span style={{color: '#6b7280'}}> ({formatCurrency(availableBalanceUsd)})</span>
                                                 )}
                                             </div>
-                                            {allocations[index] > 0 && (
+                                            {values[index] > 0 && (
                                                 <div style={{fontSize: '11px', color: '#ef4444', marginTop: '1px'}}>
                                                     Spent: {formatTokenBalance(allocationAmount / price, asset.symbol)} ({formatCurrency(allocationAmount)})
                                                 </div>
@@ -341,75 +390,34 @@ export function Assets({
                             </div>
 
                             {/* Slider */}
-                            <div style={{flex: 1, display: 'flex', alignItems: 'center', gap: '16px'}}>
-                                <span style={{fontSize: '12px', color: '#6b7280', minWidth: '30px'}}>0%</span>
+                            <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                                {/* Basic HTML Range Slider */}
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={values[index]}
+                                    onChange={(e) => handleSliderChange(index, Number(e.target.value))}
+                                    disabled={sliderDisabled}
+                                    style={{
+                                        width: '100%',
+                                        margin: '0',
+                                        opacity: sliderDisabled ? 0.5 : 1,
+                                        cursor: sliderDisabled ? 'not-allowed' : 'pointer'
+                                    }}
+                                    title={
+                                        !wallet?.isConnected ? 'Connect wallet to edit' :
+                                        hasZeroBalance ? 'No balance available for this asset' :
+                                        (isTargetReached && values[index] === 0) ? 
+                                        'Cannot add more assets - target reached exactly' : ''
+                                    }
+                                />
 
-                                {/* Custom Slider Container */}
-                                <div style={{
-                                    position: 'relative',
-                                    flex: 1,
-                                    height: '6px',
-                                    background: '#e5e7eb',
-                                    borderRadius: '3px',
-                                    margin: '0 16px',
-                                    opacity: isSliderDisabled ? 0.5 : 1
-                                }}>
-                                    {/* Progress Fill */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        height: '100%',
-                                        width: `${allocations[index]}%`,
-                                        background: hasZeroBalance ? '#d1d5db' :
-                                            contributesToTarget ? '#22c55e' : '#111827',
-                                        borderRadius: '3px',
-                                        transition: 'width 0.2s ease'
-                                    }} />
-
-                                    {/* Actual Slider Input */}
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        value={allocations[index]}
-                                        onChange={(e) => handleSliderChange(index, Number(e.target.value))}
-                                        disabled={isSliderDisabled}
-                                        className="custom-slider"
-                                        style={{
-                                            position: 'absolute',
-                                            top: '-6px',
-                                            left: 0,
-                                            width: '100%',
-                                            height: '18px',
-                                            background: 'transparent',
-                                            outline: 'none',
-                                            WebkitAppearance: 'none',
-                                            appearance: 'none',
-                                            cursor: isSliderDisabled ? 'not-allowed' : 'pointer'
-                                        }}
-                                        title={isSliderDisabled ? 'Connect wallet to edit' :
-                                            (isTargetReached && allocations[index] === 0) ? 'Cannot add more resources - target reached' : ''}
-                                    />
-
-                                    {/* Custom Slider Thumb */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '-6px',
-                                        left: `calc(${allocations[index]}% - 9px)`,
-                                        width: '18px',
-                                        height: '18px',
-                                        background: hasZeroBalance ? '#9ca3af' :
-                                            contributesToTarget ? '#22c55e' : '#111827',
-                                        borderRadius: '50%',
-                                        border: '2px solid white',
-                                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
-                                        pointerEvents: 'none',
-                                        transition: 'left 0.2s ease'
-                                    }} />
+                                {/* Labels below slider */}
+                                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280'}}>
+                                    <span>0%</span>
+                                    <span>100%</span>
                                 </div>
-
-                                <span style={{fontSize: '12px', color: '#6b7280', minWidth: '40px'}}>100%</span>
                             </div>
 
                             {/* Allocation Display */}
@@ -422,7 +430,7 @@ export function Assets({
                                     {formatCurrency(allocationAmount)}
                                 </div>
                                 <div style={{fontSize: '12px', color: '#6b7280'}}>
-                                    Slider: {allocations[index].toFixed(1)}% • Effective: {effectiveValues[index].toFixed(1)}%
+                                    Slider: {values[index].toFixed(1)}% • Effective: {effective[index].toFixed(1)}%
                                 </div>
                             </div>
                         </div>

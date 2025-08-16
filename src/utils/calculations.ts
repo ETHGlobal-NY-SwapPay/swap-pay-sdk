@@ -14,7 +14,7 @@ export function calculateAllocation(
     prices: TokenPrices | null,
     balances: TokenBalances | null = null,
     targetAmount = 10000,
-    tolerance = 1 // $1 tolerance instead of percentage
+    tolerance = 0 // Zero tolerance for exact validation
 ): AllocationCalculationResult {
     if (!prices) {
         return {
