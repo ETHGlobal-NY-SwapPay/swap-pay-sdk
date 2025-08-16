@@ -42,7 +42,7 @@ jobs:
           
           # Function to check if version exists on npm
           check_version_exists() {
-            npm view @cristianchaparroa/simple-dyamond@$1 version 2>/dev/null
+            npm view swap-pay-sdk@$1 version 2>/dev/null
           }
           
           # Start with current version
@@ -94,7 +94,14 @@ jobs:
             
             Install with:
             ```
-            npm install @cristianchaparroa/simple-dyamond@${{ steps.version.outputs.new }}
+            npm install swap-pay-sdk@${{ steps.version.outputs.new }}
             ```
           draft: false
           prerelease: false
+
+      - name: Commit version changes
+        if: steps.version.outputs.should_publish == 'true'
+        run: |
+          git add package.json
+          git commit -m "chore: bump version to v${{ steps.version.outputs.new }}" || echo "No changes to commit"
+          git push origin main
