@@ -1,3 +1,5 @@
+import {SEPOLIA_ASSETS} from "@/config/assets.ts";
+
 function formatCurrency(amount: number, currency = 'USD'): string {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -9,6 +11,7 @@ const Assets = () => {
     const totalAllocated = 0;
     const targetAmount = 0;
     const isTargetReached = true;
+    const assets = SEPOLIA_ASSETS;
 
     return (
         <div>
@@ -45,6 +48,20 @@ const Assets = () => {
                         transition: 'width 0.3s ease'
                     }}/>
                 </div>
+            </div>
+
+            {/* Asset List */}
+            <div>
+                {assets.map(asset => (
+                    <div key={asset.symbol} style={{
+                        padding: '10px',
+                        border: '1px solid #ccc',
+                        marginBottom: '10px'
+                    }}>
+                        <div>{asset.name} ({asset.symbol})</div>
+                        <div>Price: 10</div>
+                    </div>
+                ))}
             </div>
         </div>
     );
