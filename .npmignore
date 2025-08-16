@@ -1,0 +1,38 @@
+# Development files
+src/
+public/
+.idea/
+.vscode/
+node_modules/
+
+# Build artifacts (except dist)
+.tmp/
+
+# Development configs
+vite.config.ts
+tsconfig*.json
+eslint.config.js
+index.html
+
+# Environment and cache files
+.env*
+.DS_Store
+*.log
+*.tsbuildinfo
+
+# Git
+.git/
+.gitignore
+
+# Lock files (let users manage their own)
+package-lock.json
+yarn.lock
+bun.lockb
+
+# Demo/test files
+demo/
+examples/
+__tests__/
+*.test.*
+*.spec.*
+*.tgz

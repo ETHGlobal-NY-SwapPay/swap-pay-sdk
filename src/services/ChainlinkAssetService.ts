@@ -1,10 +1,10 @@
 import type {TokenPrices, TokenBalances, ProviderConfig, AssetDataService} from '../types';
-import {createPublicClient, http, getContract, type Address} from 'viem';
+import {createPublicClient, http, type Address} from 'viem';
 import {sepolia} from 'viem/chains';
-import {DataFeeds} from "../assets/contracts/DataFeeds.ts";
+import {DataFeeds} from "../assets/contracts/DataFeeds";
 
 export class ChainlinkAssetService implements AssetDataService {
-    private publicClient;
+    private publicClient: any;
 
     constructor(private config: ProviderConfig) {
         this.publicClient = createPublicClient({
@@ -15,17 +15,16 @@ export class ChainlinkAssetService implements AssetDataService {
 
     async getPrices(): Promise<TokenPrices> {
         try {
-            const contract = getContract({
+            const result = await this.publicClient.readContract({
                 address: this.config.contractAddress as Address,
                 abi: DataFeeds.abi,
-                client: {public: this.publicClient},
-            });
-
-            const result = await contract.read.getPrices([]);
+                functionName: 'getPrices',
+                args: [],
+            }) as any;
 
             return {
                 ethUsd: BigInt(result.ethUsd),
-                wbtcUsd: BigInt(result.wbtcUsd),
+                wbtcUsd: BigInt(result.wbtcUsd), 
                 daiUsd: BigInt(result.daiUsd),
                 usdcUsd: BigInt(result.usdcUsd),
                 linkUsd: BigInt(result.linkUsd),
@@ -39,13 +38,12 @@ export class ChainlinkAssetService implements AssetDataService {
 
     async getBalances(address: string): Promise<TokenBalances> {
         try {
-            const contract = getContract({
+            const result = await this.publicClient.readContract({
                 address: this.config.contractAddress as Address,
                 abi: DataFeeds.abi,
-                client: {public: this.publicClient},
-            });
-
-            const result = await contract.read.getBalances([address as Address]);
+                functionName: 'getBalances',
+                args: [address as Address],
+            }) as any;
 
             return {
                 eth: result.eth,

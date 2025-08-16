@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "noEmit": false,
+    "composite": false,
+    "module": "ESNext",
+    "target": "ES2020",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.lib.tsbuildinfo"
+  },
+  "include": ["src/index.ts", "src/types/**/*", "src/components/**/*", "src/hooks/**/*", "src/services/**/*", "src/adapters/**/*", "src/utils/**/*"],
+  "exclude": ["src/main.tsx", "src/App.tsx", "src/App.css", "src/vite-env.d.ts", "**/*.test.*", "**/*.spec.*"]
+}
