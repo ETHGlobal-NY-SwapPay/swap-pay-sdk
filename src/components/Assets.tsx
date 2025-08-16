@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SEPOLIA_ASSETS } from "@/config/assets.ts";
+import { SEPOLIA_ASSETS } from "../config/assets.ts";
 import type {
     AssetDataService,
     AllocationState
@@ -9,8 +9,9 @@ import { useBalances } from '../hooks/balances';
 import { calculateAllocation } from '../utils/calculations';
 import { formatCurrency, formatBalance, formatTokenBalance } from '../utils/formatters';
 import type {Wallet} from "@/types/wallet.ts";
+import {ChainlinkAssetService} from "../services/ChainlinkAssetService.ts";
 
-interface AssetsProps {
+export interface AssetsProps {
     service: AssetDataService;
     targetAmount: number;
     wallet?: Wallet;
@@ -35,8 +36,7 @@ const containerStyle: React.CSSProperties = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
 };
 
-const Assets = ({
-                    service,
+export const Assets = ({
                     targetAmount = 1000,
                     wallet,
                     onAllocationChange,
@@ -46,6 +46,7 @@ const Assets = ({
     const [allocations, setAllocations] = useState<number[]>(
         new Array(assets.length).fill(0)
     );
+    const service = new ChainlinkAssetService();
 
     // Use separate hooks for prices and balances
     const { prices, error: priceError } = usePrices(service, 5000);
@@ -434,5 +435,3 @@ const Assets = ({
         </div>
     );
 }
-
-export default Assets;
