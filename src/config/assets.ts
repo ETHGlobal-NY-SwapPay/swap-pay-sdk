@@ -1,4 +1,4 @@
-import type {AssetConfig} from '@/types';
+import type {AssetConfig} from '../types';
 
 export const SEPOLIA_ASSETS: AssetConfig[] = [
     {
@@ -47,7 +47,7 @@ export const SEPOLIA_ASSETS: AssetConfig[] = [
     {
         name: "LINK",
         symbol: "LINK",
-        contractAddress: "0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E",
+        contractAddress: "0x12D50F27df72c759B950a125FdeACe37e3ef21d1",
         priceFeedAddress: "0xc59E3633BAAC79493d908e63626716e204A45EdF",
         priceFeedDecimals: 8,
         tokenDecimals: 18,

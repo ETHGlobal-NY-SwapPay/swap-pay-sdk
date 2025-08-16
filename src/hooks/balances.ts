@@ -2,8 +2,8 @@ import {useState, useEffect, useCallback} from 'react';
 import type {
     TokenBalances,
     AssetDataService
-} from '@/types';
-import type {WalletProvider} from '@/types/wallet';
+} from '../types';
+import type {WalletProvider} from '../types/wallet';
 
 export function useBalances(
     service: AssetDataService,
