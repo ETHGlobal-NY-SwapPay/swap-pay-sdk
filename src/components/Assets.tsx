@@ -319,7 +319,8 @@ export function Assets({
 
                     return (
                         <div key={asset.symbol} style={{
-                            display: 'flex',
+                            display: 'grid',
+                            gridTemplateColumns: '200px 1fr 120px',
                             alignItems: 'center',
                             gap: '16px',
                             padding: '16px 0',
@@ -329,8 +330,8 @@ export function Assets({
                             paddingLeft: contributesToTarget ? '12px' : '0',
                             paddingRight: contributesToTarget ? '12px' : '0'
                         }}>
-                            {/* Asset Info */}
-                            <div style={{display: 'flex', alignItems: 'center', gap: '12px', minWidth: '200px'}}>
+                            {/* Asset Info - Fixed width column */}
+                            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
                                 <img
                                     src={asset.logo}
                                     alt={asset.name}
@@ -388,8 +389,15 @@ export function Assets({
                                 </div>
                             </div>
 
-                            {/* Slider */}
-                            <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                            {/* Slider - Flexible center column */}
+                            <div style={{
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: '4px',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: '100%'
+                            }}>
                                 {/* Basic HTML Range Slider */}
                                 <input
                                     type="range"
@@ -413,14 +421,14 @@ export function Assets({
                                 />
 
                                 {/* Labels below slider */}
-                                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280', width: '100%'}}>
                                     <span>0%</span>
                                     <span>100%</span>
                                 </div>
                             </div>
 
-                            {/* Allocation Display */}
-                            <div style={{textAlign: 'right', minWidth: '120px'}}>
+                            {/* Allocation Display - Fixed width column */}
+                            <div style={{textAlign: 'right'}}>
                                 <div style={{
                                     fontWeight: '600',
                                     fontSize: '16px',

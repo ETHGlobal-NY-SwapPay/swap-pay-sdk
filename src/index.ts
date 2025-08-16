@@ -1,8 +1,8 @@
 // Self-contained component - no external CSS dependencies
 
 // Main Components
-export {Assets} from './components/Assets.tsx';
-export type {AssetsProps} from './components/Assets.tsx';
+export {Assets} from './components/Assets';
+export type {AssetsProps} from './components/Assets';
 
 // Hooks
 export {usePrices} from './hooks/prices';

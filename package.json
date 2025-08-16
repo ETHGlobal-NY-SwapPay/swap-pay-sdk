@@ -1,34 +1,72 @@
 {
-  "name": "swap-sdk-pay",
-  "private": true,
-  "version": "0.0.0",
+  "name": "swap-pay-sdk",
+  "private": false,
+  "version": "1.0.0",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=16.0.0",
     "npm": ">=8.0.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ETHGlobal-NY-SwapPay/swap-pay-sdk.git"
+  },
+  "keywords": [
+    "swap",
+    "payment",
+    "ethereum",
+    "sdk",
+    "web3",
+    "react",
+    "typescript"
+  ],
+  "author": "Swap team",
+  "license": "MIT",
+  "homepage": "https://github.com/ETHGlobal-NY-SwapPay/swap-pay-sdk/#readme",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "./build.sh",
+    "build:lib": "vite build --mode lib",
+    "build:types": "tsc --project tsconfig.lib.json",
+    "build:demo": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@rainbow-me/rainbowkit": "^2.2.8",
-    "@tailwindcss/vite": "^4.1.11",
-    "@tanstack/react-query": "^5.85.3",
-    "path": "^0.12.7",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "tailwindcss": "^4.1.11",
-    "viem": "^2.33.3",
-    "wagmi": "^2.16.3"
+    "path": "^0.12.7"
+  },
+  "peerDependencies": {
+    "@rainbow-me/rainbowkit": "^2.2.0",
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "viem": "^2.0.0",
+    "wagmi": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
+    "@rainbow-me/rainbowkit": "^2.2.8",
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^15.3.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@tailwindcss/vite": "^4.1.11",
+    "@tanstack/react-query": "^5.85.3",
     "@types/node": "^24.2.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
@@ -37,8 +75,15 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "rollup": "^4.46.2",
+    "rollup-plugin-peer-deps-external": "^2.2.4",
+    "tailwindcss": "^4.1.11",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
-    "vite": "^7.0.4"
+    "viem": "^2.33.3",
+    "vite": "^5.4.8",
+    "wagmi": "^2.16.3"
   }
 }
