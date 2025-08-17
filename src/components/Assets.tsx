@@ -275,7 +275,7 @@ export function Assets({
                 <div style={{
                     width: '100%',
                     height: '8px',
-                    background: '#f3f4f6',
+                    background: '#f5f7fd',
                     borderRadius: '4px',
                     overflow: 'hidden'
                 }}>
@@ -427,7 +427,12 @@ export function Assets({
                                         margin: '0',
                                         opacity: sliderDisabled ? 0.5 : 1,
                                         cursor: sliderDisabled ? 'not-allowed' : 'pointer',
-                                        accentColor: '#172456'
+                                        accentColor: '#172456',
+                                        WebkitAppearance: 'none',
+                                        appearance: 'none',
+                                        background: `linear-gradient(to right, #172456 0%, #172456 ${values[index]}%, #f5f7fd ${values[index]}%, #f5f7fd 100%)`,
+                                        height: '6px',
+                                        borderRadius: '3px'
                                     }}
                                     title={
                                         !wallet?.isConnected ? 'Connect wallet to edit' :
