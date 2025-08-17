@@ -15,7 +15,7 @@ export const SEPOLIA_ASSETS: AssetConfig[] = [
     {
         name: "WBTC",
         symbol: "WBTC",
-        contractAddress: "0xDD2f20DB368a8Dba08718d8801f08B3E38FEcd08",
+        contractAddress: "0xBf4ED0f867CFf7af2acFa4F727ef43EB89C4C195",
         priceFeedAddress: "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43",
         priceFeedDecimals: 8,
         tokenDecimals: 8,
@@ -26,7 +26,7 @@ export const SEPOLIA_ASSETS: AssetConfig[] = [
     {
         name: "DAI",
         symbol: "DAI",
-        contractAddress: "0xA1dA2d6b69dA9a3cBB20afbe302d74eD46a55500",
+        contractAddress: "0x5aBa799fFDFc52785EFC073E11D4671a4186F3d8",
         priceFeedAddress: "0x14866185B1962B63C3Ea9E03Bc1da838bab34C19",
         priceFeedDecimals: 8,
         tokenDecimals: 18,
@@ -36,7 +36,7 @@ export const SEPOLIA_ASSETS: AssetConfig[] = [
     },  {
         name: "USDC",
         symbol: "USDC",
-        contractAddress: "0x0045912A7Cf4ccEd07cB0197B1eB05eb5330cE04",
+        contractAddress: "0xdC02992BD2700966775fDDd9ee1d8758B3Af24C5",
         priceFeedAddress: "0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E",
         priceFeedDecimals: 8,
         tokenDecimals: 6,
@@ -47,7 +47,7 @@ export const SEPOLIA_ASSETS: AssetConfig[] = [
     {
         name: "LINK",
         symbol: "LINK",
-        contractAddress: "0x12D50F27df72c759B950a125FdeACe37e3ef21d1",
+        contractAddress: "0xd76ff4D27F5D56e24B3764e08Ffd7052006B10B1",
         priceFeedAddress: "0xc59E3633BAAC79493d908e63626716e204A45EdF",
         priceFeedDecimals: 8,
         tokenDecimals: 18,
@@ -58,7 +58,7 @@ export const SEPOLIA_ASSETS: AssetConfig[] = [
     {
         name: "WSTETH",
         symbol: "WSTETH",
-        contractAddress: "0x3d2fBc87d4Bb4c0364a727bbFD3B97420B5BbDeB",
+        contractAddress: "0x33e3BDE50A20946FFb2e2f2C6A9C4Cb291A90cfE",
         priceFeedAddress: "0xaaabb530434B0EeAAc9A42E25dbC6A22D7bE218E",
         priceFeedDecimals: 8,
         tokenDecimals: 18,

@@ -4,7 +4,9 @@ import type {
     AssetDataService,
     AllocationState,
     PurchasePayload,
-    FeeConfig
+    FeeConfig,
+    TargetContract,
+    BatchCall
 } from '../types';
 import {usePrices} from '../hooks/prices';
 import {useBalances} from '../hooks/balances';
@@ -12,6 +14,7 @@ import {formatCurrency, formatBalance, formatTokenBalance, formatPrice} from '..
 import {PurchaseCalculator} from '../utils/purchaseCalculator';
 import type {Wallet} from "../types/wallet";
 import {ChainlinkAssetService} from '../services/ChainlinkAssetService';
+import {buildSwapBatchTransaction} from '../utils/transactionBuilder';
 import {SEPOLIA_ASSETS, SEPOLIA_CONFIG} from '../config';
 
 export interface AssetsProps {
@@ -22,6 +25,9 @@ export interface AssetsProps {
     className?: string;
     onAllocationChange?: (state: AllocationState) => void;
     onPurchase?: (payload: PurchasePayload) => void;
+    // New: Target contract for swap execution
+    targetContract?: TargetContract;
+    onExecuteSwap?: (batchCalls: BatchCall[]) => Promise<string>;
     feeConfig?: FeeConfig;
 }
 
@@ -49,6 +55,8 @@ export function Assets({
                                     targetAmount = 10000,
                                     onAllocationChange,
                                     onPurchase,
+                                    targetContract,
+                                    onExecuteSwap,
                                     feeConfig,
                                 }: AssetsProps) {
 
@@ -167,27 +175,53 @@ export function Assets({
         setActiveSliderIndex(null);
     };
 
-    const handlePurchase = () => {
-        if (onPurchase && isTargetReached && prices) {
-            const state: AllocationState = {
-                sliderValues: values,
-                effectiveValues: effective,
-                totalAllocated: totalAllocated,
-                isComplete: isTargetReached
-            };
+    const handlePurchase = async () => {
+        if (!isTargetReached || !prices) return;
 
-            // Create enhanced purchase payload
-            const payload = PurchaseCalculator.createPurchasePayload(
-                state,
-                assets,
-                prices,
-                tokenLimits,
-                targetAmount,
-                wallet?.chainId ?? 0,
-                feeConfig
-            );
+        const state: AllocationState = {
+            sliderValues: values,
+            effectiveValues: effective,
+            totalAllocated: totalAllocated,
+            isComplete: isTargetReached
+        };
 
+        // Create enhanced purchase payload
+        const payload = PurchaseCalculator.createPurchasePayload(
+            state,
+            assets,
+            prices,
+            tokenLimits,
+            targetAmount,
+            wallet?.chainId ?? 0,
+            feeConfig
+        );
+
+        // Check if we should build transactions or just call onPurchase
+        if (targetContract && onExecuteSwap) {
+            try {
+                // Build complete batch transaction
+                const batchCalls = buildSwapBatchTransaction(
+                    payload.items,
+                    targetContract.address,
+                    targetContract.callData,
+                    targetContract.paymentTokenAmount,
+                    wallet?.chainId ?? 11155111 // default to sepolia
+                );
+
+                // Call demo's execution function with ready batch
+                await onExecuteSwap(batchCalls);
+            } catch (error) {
+                console.error('Failed to build or execute swap transaction:', error);
+                // Fallback to onPurchase if provided
+                if (onPurchase) {
+                    onPurchase(payload);
+                }
+            }
+        } else if (onPurchase) {
+            // Legacy mode: just call onPurchase with payload
             onPurchase(payload);
+        } else {
+            console.warn('No execution handler provided. Either provide targetContract + onExecuteSwap or onPurchase.');
         }
     };
 
@@ -266,7 +300,7 @@ export function Assets({
                                 fontSize: '14px'
                             }}
                         >
-                            Purchase
+                            {targetContract ? 'Execute Swap' : 'Purchase'}
                         </button>
                     </div>
                 </div>
