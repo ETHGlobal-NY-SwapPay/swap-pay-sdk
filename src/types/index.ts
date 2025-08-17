@@ -101,3 +101,11 @@ export interface FeeConfig {
     rateBps: number;              // basis points (5 = 0.05%)
     tokenSymbol: string;          // "ETH" for fee payment
 }
+
+// Re-export transaction types
+export type {
+    BatchCall,
+    TargetContract,
+    SwapExecuteParams,
+    SwapExecutionResult,
+} from './transaction';

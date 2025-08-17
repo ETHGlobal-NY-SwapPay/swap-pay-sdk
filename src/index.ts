@@ -15,6 +15,17 @@ export {ChainlinkAssetService} from './services/ChainlinkAssetService';
 // Utilities
 export {PurchaseCalculator} from './utils/purchaseCalculator';
 
+// Transaction Building Utilities
+export {
+    buildApprovalTransactions,
+    buildTokenArrays,
+    buildSwapPayExecuteCalldata,
+    buildSwapBatchTransaction,
+} from './utils/transactionBuilder';
+
+// Contracts
+export { SWAP_PAY_CONTRACT, NATIVE_SENTINEL } from './contracts/SwapPay';
+
 // Wallet Adapters
 export {RainbowKitAdapter} from './adapters/RainbowKitAdapter';
 export {MetaMaskAdapter} from './adapters/MetaMaskAdapter';
@@ -33,5 +44,9 @@ export type {
     PurchaseItem,
     PurchasePayload,
     FeeCalculation,
-    FeeConfig
+    FeeConfig,
+    BatchCall,
+    TargetContract,
+    SwapExecuteParams,
+    SwapExecutionResult,
 } from './types';
