@@ -207,15 +207,15 @@ export function Assets({
             {/* Header */}
             <div style={{
                 ...cardStyle,
-                background: isTargetReached ? '#f0fdf4' : 'white', // Light green background when target reached
-                border: isTargetReached ? '1px solid #22c55e' : '1px solid #e5e7eb'
+                background: isTargetReached ? '#f0f7ff' : 'white', // Light blue background when target reached
+                border: isTargetReached ? '1px solid #375bd2' : '1px solid #e5e7eb'
             }}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
                     <h1 style={{
                         margin: 0,
                         fontSize: '18px',
                         fontWeight: '600',
-                        color: isTargetReached ? '#16a34a' : 'inherit'
+                        color: isTargetReached ? '#375bd2' : 'inherit'
                     }}>
                         Portfolio Allocation {isTargetReached && '✓'}
                     </h1>
@@ -228,12 +228,12 @@ export function Assets({
                     <div style={{
                         fontSize: '24px',
                         fontWeight: '700',
-                        color: isTargetReached ? '#16a34a' : 'inherit'
+                        color: isTargetReached ? '#375bd2' : 'inherit'
                     }}>
                         {formatCurrency(totalAllocated)}
                         <span style={{
                             fontSize: '16px',
-                            color: isTargetReached ? '#16a34a' : '#6b7280',
+                            color: isTargetReached ? '#375bd2' : '#6b7280',
                             marginLeft: '8px'
                         }}>
                             / {formatCurrency(targetAmount)}
@@ -260,7 +260,7 @@ export function Assets({
                                 padding: '8px 16px',
                                 border: 'none',
                                 borderRadius: '6px',
-                                background: isTargetReached ? '#16a34a' : '#d1d5db',
+                                background: isTargetReached ? '#375bd2' : '#d1d5db',
                                 color: isTargetReached ? 'white' : '#6b7280',
                                 cursor: isTargetReached ? 'pointer' : 'not-allowed',
                                 fontSize: '14px'
@@ -275,14 +275,14 @@ export function Assets({
                 <div style={{
                     width: '100%',
                     height: '8px',
-                    background: '#f3f4f6',
+                    background: '#f5f7fd',
                     borderRadius: '4px',
                     overflow: 'hidden'
                 }}>
                     <div style={{
                         width: `${Math.min(100, (totalAllocated / targetAmount) * 100)}%`,
                         height: '100%',
-                        background: isTargetReached ? '#22c55e' : '#111827',
+                        background: isTargetReached ? '#375bd2' : '#111827',
                         transition: 'width 0.3s ease'
                     }} />
                 </div>
@@ -291,11 +291,11 @@ export function Assets({
                     <div style={{
                         marginTop: '12px',
                         padding: '8px 12px',
-                        background: '#dcfce7',
-                        border: '1px solid #22c55e',
+                        background: '#eff6ff',
+                        border: '1px solid #375bd2',
                         borderRadius: '6px',
                         fontSize: '14px',
-                        color: '#16a34a'
+                        color: '#375bd2'
                     }}>
                         🎯 Target reached exactly! You can only decrease or modify existing allocations.
                     </div>
@@ -341,7 +341,7 @@ export function Assets({
                             gap: '16px',
                             padding: '16px 0',
                             borderBottom: index < assets.length - 1 ? '1px solid #f3f4f6' : 'none',
-                            background: contributesToTarget ? '#f0fdf4' : 'transparent',
+                            background: contributesToTarget ? '#eff6ff' : 'transparent',
                             borderRadius: contributesToTarget ? '6px' : '0',
                             paddingLeft: contributesToTarget ? '12px' : '0',
                             paddingRight: contributesToTarget ? '12px' : '0'
@@ -370,7 +370,7 @@ export function Assets({
                                         <span style={{
                                             fontWeight: '600',
                                             fontSize: '14px',
-                                            color: contributesToTarget ? '#16a34a' : 'inherit'
+                                            color: contributesToTarget ? '#375bd2' : 'inherit'
                                         }}>
                                             {asset.name} {contributesToTarget && '✓'}
                                         </span>
@@ -426,7 +426,13 @@ export function Assets({
                                         width: '100%',
                                         margin: '0',
                                         opacity: sliderDisabled ? 0.5 : 1,
-                                        cursor: sliderDisabled ? 'not-allowed' : 'pointer'
+                                        cursor: sliderDisabled ? 'not-allowed' : 'pointer',
+                                        accentColor: '#172456',
+                                        WebkitAppearance: 'none',
+                                        appearance: 'none',
+                                        background: `linear-gradient(to right, #172456 0%, #172456 ${values[index]}%, #f5f7fd ${values[index]}%, #f5f7fd 100%)`,
+                                        height: '6px',
+                                        borderRadius: '3px'
                                     }}
                                     title={
                                         !wallet?.isConnected ? 'Connect wallet to edit' :
@@ -448,7 +454,7 @@ export function Assets({
                                 <div style={{
                                     fontWeight: '600',
                                     fontSize: '16px',
-                                    color: contributesToTarget ? '#16a34a' : 'inherit'
+                                    color: contributesToTarget ? '#375bd2' : 'inherit'
                                 }}>
                                     {formatCurrency(allocationAmount)}
                                 </div>
